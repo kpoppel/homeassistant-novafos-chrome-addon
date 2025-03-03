@@ -2,7 +2,7 @@
 
 ![Image of the Chrome Extension in the extension manager view](image.png)
 
-**Security notice: Please do yourself a favor and make a habit of checking that extensions don't transmit your personal info to the Internet.  This extension reads headers of your browser traffic and extracts the authenticatino token allowing a web application, like the official webpage aplication to retrieve your data from the KMD data storage.  The Bearer token extracted is only valid for 60 minutes but this is enough for anyone to grab your personal data.**
+**Security notice: Please do yourself a favor and make a habit of checking that extensions don't transmit your personal info to the Internet.  This extension reads headers of your browser traffic and extracts the authentication token allowing a web application, like the official webpage application to retrieve your data from the KMD data storage.  The Bearer token extracted is only valid for 60 minutes but this is enough for anyone to grab your personal data.**
 
 The extension will only transmit the token to the server you specify, and only over HTTPS. The source code is open for inspection/verification, do youself a favor and take a look to see how it does it.
 
@@ -41,7 +41,7 @@ Available for Chrome, maybe Firefox, Edge, Chromium.  I don't know.
 1. Make sure your Home Assistant is using HTTPS.  This is important because
    calling a HTTP (unsecure) site from a secure page is not allowed, nor advisable.
    You can configure caddy, nginx, Traefik, Tailscale, maybe even Home Assistant itself to use SSL/HTTPS.
-2. If you setup a HTTPS proxy like Traefik, you alwant to put this into the http-section in `configuration.yaml`:
+2. If you setup a HTTPS proxy like Traefik, you want to put this into the http-section in `configuration.yaml`:
 ```
     http:
         use_x_forwarded_for: true
@@ -88,10 +88,12 @@ second set of fields.  As long as this box is checked service calls will go to t
 
 # Using Traefik-proxy to get Home Assistant on HTTPS
 
-If you are unsure how to serve Home Assistant via HTTPS (which is a requirement for the Chrome extension), you can find and example here using Traefik as a docker-compose file and static setup.
+If you are unsure how to serve Home Assistant via HTTPS (which is a requirement for the Chrome extension), you can find an example here using Traefik as a docker-compose file and static setup.
 There are several other ways to do this of course.
 
-In the `traefik-proxy` directory you will find a docker-compose file and static setup for proxying Home Assistant.  Try it out.  Then read about Traefik and never ever expose your Home Assistant directly to the Internet.  Use Tailscale or Nabucasa for this.
+In the `traefik-proxy` directory you will find a docker-compose file and static setup for proxying Home Assistant.  Try it out.  Then read about Traefik and never ever expose your Home Assistant directly to the Internet.  Use Tailscale or NabuCasa for this.
 
 Alternatives are Apache, Nginx, Caddy, Traefik, NabuCasa.
 There is a thread here which may help too: [https://community.home-assistant.io/t/connecting-to-ha-locally-using-https/566441/50](https://community.home-assistant.io/t/connecting-to-ha-locally-using-https/566441/50)
+
+Note: Only the Traefik setup is tested as part of the development of this extension.
