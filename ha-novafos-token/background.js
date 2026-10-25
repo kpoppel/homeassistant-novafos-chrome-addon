@@ -2,6 +2,31 @@
 let tokenFound = false;
 let currentTabId = null;
 
+function isNovafosUrl(value) {
+  try {
+    const url = new URL(value);
+    return url.origin === "https://easy-energy-plugin-api.kmd.dk" && url.pathname.startsWith("/api/");
+  } catch {
+    return false;
+  }
+}
+
+function getTokenExpiry(token) {
+  try {
+    const parts = token.split(".");
+    if (parts.length !== 3) {
+      return null;
+    }
+    const payload = parts[1].replace(/-/g, "+").replace(/_/g, "/");
+    const { exp } = JSON.parse(atob(payload));
+    const expiresAt = exp * 1000;
+    return typeof exp === "number" && Number.isFinite(expiresAt) && expiresAt > Date.now()
+      ? expiresAt : null;
+  } catch {
+    return null;
+  }
+}
+
 function handleTokenFound() {
   // Update the badge on the icon
   if (!tokenFound) {
@@ -54,49 +79,32 @@ chrome.tabs.onRemoved.addListener(function (tabId) {
 /* *************************** */
 /* Listeners for headers sent and received from which to extract tokens */
 /* *************************** */
-chrome.webRequest.onBeforeSendHeaders.addListener(
-  async function (details) {
-    if (details.tabId === -1) {
-      return; // Ignore requests not associated with a tab (e.g., background requests)
-    }
-    for (const header of details.requestHeaders) {
-      if (header.name === "Authorization" && header.value.startsWith("Bearer ")) {
-        const token = header.value.substring("Bearer ".length);
-        console.log("Found Bearer token (onBeforeSendHeaders):", token, "URL:", details.url);
-        if (token) {
-          // Store the token, send it to a popup, etc.
-          await chrome.storage.local.set({ "token": token, "url": details.url });
-          handleTokenFound();
-          currentTabId = details.tabId; // Update the current tab ID
-          break;
-        }
+async function captureToken(details, headers) {
+  if (details.tabId < 0 || !isNovafosUrl(details.url)) {
+    return;
+  }
+  for (const header of headers || []) {
+    if (header.name.toLowerCase() === "authorization" && typeof header.value === "string") {
+      const match = /^Bearer\s+(\S+)\s*$/i.exec(header.value);
+      if (match && getTokenExpiry(match[1])) {
+        await chrome.storage.local.set({ token: match[1], url: details.url });
+        handleTokenFound();
+        currentTabId = details.tabId;
+        break;
       }
     }
-  },
-  { urls: ["<all_urls>"] }, // Filter URLs if possible
+  }
+}
+
+chrome.webRequest.onBeforeSendHeaders.addListener(
+  (details) => captureToken(details, details.requestHeaders),
+  { urls: ["https://easy-energy-plugin-api.kmd.dk/api/*"] },
   ["requestHeaders"]
 );
 
 chrome.webRequest.onHeadersReceived.addListener(
-  async function (details) {
-    if (details.tabId === -1) {
-      return; // Ignore requests not associated with a tab (e.g., background requests)
-    }
-    for (const header of details.responseHeaders) {
-      if (header.name.toLowerCase() === "authorization" && header.value.toLowerCase().startsWith("bearer ")) {
-        const token = header.value.substring("Bearer ".length);
-        console.log("Found Bearer token (onHeadersReceived):", token, "URL:", details.url);
-        if (token) {
-          // Store the token, send it to a popup, etc.
-          await chrome.storage.local.set({ "token": token, "url": details.url });
-          handleTokenFound();
-          currentTabId = details.tabId; // Update the current tab ID
-          break;
-        }
-      }
-    }
-  },
-  { urls: ["<all_urls>"] },
+  (details) => captureToken(details, details.responseHeaders),
+  { urls: ["https://easy-energy-plugin-api.kmd.dk/api/*"] },
   ["responseHeaders"]
 );
 
@@ -107,7 +115,13 @@ chrome.runtime.onMessage.addListener(
     if (request.message === "getToken") {
       // The reponse uses the data stored by then in HeadersReceived and onBeforeSendHeaders above.
       chrome.storage.local.get(["token", "url"], function (result) {
-        sendResponse({ token: result.token, url: result.url });
+        const expiresAt = getTokenExpiry(result.token);
+        if (!expiresAt || !isNovafosUrl(result.url)) {
+          clearTokenData();
+          sendResponse({});
+          return;
+        }
+        sendResponse({ token: result.token, url: result.url, expiresAt });
       });
       return true; // Important: Indicate response sent asynchronously
     }

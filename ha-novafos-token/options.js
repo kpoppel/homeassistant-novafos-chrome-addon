@@ -34,7 +34,6 @@ setupForm.ha_url.addEventListener("change", (event) => {
 
 setupForm.ha_token.addEventListener("change", (event) => {
     chrome.storage.local.set({ "ha_token": event.target.value });
-    console.log("HA token updated to "+event.target.value);
 });
 
 setupForm.debug_mode_toggle.addEventListener("change", (event) => {
@@ -58,7 +57,6 @@ developerForm.ha_url_dev.addEventListener("change", (event) => {
 
 developerForm.ha_token_dev.addEventListener("change", (event) => {
     chrome.storage.local.set({ "ha_token_dev": event.target.value });
-    console.log("HA DEV token updated to "+event.target.value);
 });
 
 developerForm.include_bearer_toggle.addEventListener("change", (event) => {

@@ -21,6 +21,21 @@
       .toggle-container {
         margin-top: 10px;
       }
+
+      #token-url {
+        overflow-wrap: anywhere;
+      }
+
+      #output-token {
+        display: block;
+        box-sizing: border-box;
+        width: 100%;
+        height: 6em;
+        min-height: 0;
+        resize: none;
+        overflow: auto;
+        overflow-wrap: anywhere;
+      }
     </style>
   </head>
 
@@ -85,7 +100,7 @@
           <div>
             <h6 class="uk-card-title uk-text-default" id="token-url"></h6>
           </div>
-            <div class="uk-text-break" id="output-token"></div>
+            <textarea class="uk-textarea" id="output-token" rows="4" readonly spellcheck="false" aria-label="Novafos access token"></textarea>
             <div class="uk-text-break" id="output-curl"></div>
             <button class="uk-button uk-button-primary uk-text-default uk-text-capitalize uk-margin-top" id="ha-button">
             Send token to Home Assistant

@@ -16,7 +16,19 @@ When logging into Novafos using either email/password or MitID, this extension w
 
 ## 🔑 Key Features
 - Enables much easier update of Novafos water/heating use data in Home Assistant.
-- Enables extraction of Bearer tokens in general, though function is specialised for Home Assistant and the Novafos module.
+- Captures Bearer tokens only from `https://easy-energy-plugin-api.kmd.dk/api/*`, matching header names and the Bearer scheme case-insensitively.
+- Rejects expired tokens and tokens without a readable numeric JWT `exp` claim, both when capturing and when retrieving them for sending. Expiry checks do not verify the JWT signature; sending a token does not extend its validity.
+- Reports successful delivery only after Home Assistant returns a successful HTTP response. HTTP errors and network failures are shown in the popup.
+
+Broad host permissions are retained so the extension can send tokens to your configured Home Assistant address, not to capture tokens from other websites. Captured tokens and Home Assistant credentials are not logged to the console.
+
+### Regression Tests
+
+Run the dependency-free tests with Node.js 18 or newer:
+
+```sh
+node --test tests/token-flow.test.cjs
+```
 
 ## 🌐 Browser support
 Available for Chrome, maybe Firefox, Edge, Chromium.  I don't know.

@@ -13,9 +13,6 @@ chrome.runtime.sendMessage({message: "getOptions"}, function(options) {
       return;
   }
 
-  console.log("Options:")
-  console.log(options);
-
   if (options.setup_toggle) {
       setupContainer.style.display = 'none';
       outputContainer.style.display = 'block';
@@ -42,45 +39,58 @@ chrome.runtime.sendMessage({message: "getToken"}, function(response) {
     }
     if (response && response.token) {
         document.getElementById("token-url").innerText = "URL: " + response.url;
-        document.getElementById("output-token").innerText = response.token;
+        document.getElementById("output-token").value = response.token;
 
         // Developer mode thing - add "Bearer" or not
         chrome.runtime.sendMessage({message: "getOptions"}, function(response) {
            if(response.include_bearer_toggle) {
-              element = document.getElementById("output-token");
-              element.innerText = "Bearer "+element.innerText;
+              const element = document.getElementById("output-token");
+              element.value = "Bearer "+element.value;
            }
         });
     } else {
-        document.getElementById("output-token").innerText = "No Bearer token found.";
+        document.getElementById("output-token").value = "No Bearer token found.";
     }
 });
 
 const webhookButton = document.getElementById("ha-button");
 webhookButton.addEventListener("click", () => {
+    webhookButton.disabled = true;
+    showNotification("Sending token to Home Assistant...");
     // Send the token to the HA instance defined by having "developer mode" on or off
     chrome.runtime.sendMessage({message: "getOptions"}, function(options) {
+        if (chrome.runtime.lastError || !options) {
+            showNotification("Could not load Home Assistant settings.", true);
+            webhookButton.disabled = false;
+            return;
+        }
         chrome.runtime.sendMessage({message: "getToken"}, function(response) {
+            if (chrome.runtime.lastError || !response || !response.token ||
+                !Number.isFinite(response.expiresAt) || response.expiresAt <= Date.now()) {
+                showNotification("No valid Novafos token. Log in to Novafos again.", true);
+                document.getElementById("output-token").value = "No valid Bearer token found.";
+                document.getElementById("token-url").innerText = "";
+                webhookButton.disabled = false;
+                return;
+            }
             if(options.debug_mode_toggle) {
                 // Use DEV configuration instead
-                callHomeAssistantService(options.ha_url_dev, options.ha_token_dev, response.token)
+                callHomeAssistantService(options.ha_url_dev, options.ha_token_dev, response.token, response.expiresAt)
             } else {
                 // Use normal config
-                callHomeAssistantService(options.ha_url, options.ha_token, response.token)
+                callHomeAssistantService(options.ha_url, options.ha_token, response.token, response.expiresAt)
             }
         });
     });
-    
-    const notificationContainer = (document.getElementById(
-        "notification-container",
-    ).innerHTML = "Token sent to Home Assistant.");
-    setTimeout(() => {
-        notificationContainer.innerHTML = "";
-    }, 3000);
 });
 
+function showNotification(message, warning = false) {
+    const notificationContainer = document.getElementById("notification-container");
+    notificationContainer.className = warning ? "uk-text-warning" : "uk-text-success";
+    notificationContainer.textContent = message;
+}
 
-function callHomeAssistantService(ha_url, ha_token, access_token) {
+async function callHomeAssistantService(ha_url, ha_token, access_token, expiresAt) {
   // Call this function to access the HA Novafox update token action service.
   // Using a Service/custom action:
   // Docs:
@@ -97,22 +107,23 @@ function callHomeAssistantService(ha_url, ha_token, access_token) {
   headers.append('Accept', 'application/json');
   headers.append('Authorization', 'Bearer ' + ha_token);
 
-  fetch(ha_url + "/api/services/novafos/update_token", {
+    try {
+        if (!access_token || !Number.isFinite(expiresAt) || expiresAt <= Date.now()) {
+            throw new Error("Novafos token expired. Log in to Novafos again.");
+        }
+        const response = await fetch(ha_url + "/api/services/novafos/update_token", {
       mode: 'cors',
       method: 'POST',
       headers: headers,
       body: JSON.stringify(data)
-  })
-  .then(response => response.json())
-  .then(json => console.log(json))
-  //.catch(error => console.log('Authorization failed: ' + error.message));
-  .catch(error => {
-    const notificationContainer = document.getElementById("notification-container");
-    notificationContainer.classList = "uk-text-warning"
-    notificationContainer.innerHTML = "Something went wrong: " + error.message;
-    setTimeout(() => {
-      notificationContainer.innerHTML = "";
-      notificationContainer.classList = "uk-text-success";
-    }, 3000);
-  });
+        });
+        if (!response.ok) {
+            throw new Error("Home Assistant returned HTTP " + response.status + ".");
+        }
+        showNotification("Token sent to Home Assistant.");
+    } catch (error) {
+        showNotification("Something went wrong: " + error.message, true);
+    } finally {
+        webhookButton.disabled = false;
+    }
 }
