@@ -2,7 +2,7 @@
     "manifest_version": 3,
     "name": "HomeAssistant Novafos Token",
     "description": "Grab Novafos access token for Home Assistant",
-    "version": "1.0",
+    "version": "1.1",
     "action": {
         "default_popup": "popup.html",
         "default_icon": {
@@ -23,6 +23,11 @@
         "<all_urls>"
     ],    
     "background": {
-      "service_worker": "background.js"
+      "scripts": ["background.js"]
+    },
+    "browser_specific_settings": {
+      "gecko": {
+        "id": "@homeassistant.novafos-addon"
+      }
     }
   }

@@ -1,0 +1,21 @@
+{
+  "name": "homeassistant-novafos-browser-addon",
+  "private": true,
+  "scripts": {
+    "build": "node scripts/build.cjs",
+    "build:chrome": "node scripts/build.cjs chrome",
+    "build:firefox": "node scripts/build.cjs firefox",
+    "lint:firefox": "npm run build:firefox && web-ext lint --source-dir dist/firefox",
+    "sign:firefox": "npm run lint:firefox && web-ext sign --source-dir dist/firefox --artifacts-dir dist/firefox-signed --channel unlisted",
+    "test": "node --test tests/*.test.cjs"
+  },
+  "packageManager": "npm@12.2.1",
+  "engines": {
+    "node": ">=24.22.1 <25",
+    "npm": ">=12.2.1 <13"
+  },
+  "devDependencies": {
+    "fflate": "0.8.3",
+    "web-ext": "10.8.0"
+  }
+}
